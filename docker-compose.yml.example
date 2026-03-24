@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: openclaw-server
+    restart: unless-stopped
+    
+    # 網路安全：僅允許本機存取 3000 埠
+    ports:
+      - "127.0.0.1:3000:3000"
+    
+    # 環境變數管理
+    env_file:
+      - .env
+    environment:
+      - OPENCLAW_MODE=gateway
+      - OPENCLAW_GATEWAY_HOST=0.0.0.0
+      - OPENCLAW_GATEWAY_PORT=3000
+    
+    # 資料持久化與安全性
+    volumes:
+      - openclaw-data:/home/openclaw/.openclaw
+      - ./workspace:/home/openclaw/workspace:rw
+      - ./data:/home/openclaw/data:ro  # 敏感資料夾設為唯讀
+    
+    # 自定義內部網路
+    networks:
+      - ai-internal
+
+    # 健康檢查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # 資源限制
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+
+networks:
+  ai-internal:
+    driver: bridge
+
+volumes:
+  openclaw-data:
