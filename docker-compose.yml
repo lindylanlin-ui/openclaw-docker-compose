@@ -15,13 +15,15 @@ services:
       - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
       - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
       - OPENCLAW_TZ=${OPENCLAW_TZ}
+      - TZ=${OPENCLAW_TZ}
     
     # 資料持久化與安全性
     volumes:
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/workspace
       - ${OPENCLAW_OPENCLAWDATA_DIR}:/home/node/data
-
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     
     # 自定義內部網路
     networks:

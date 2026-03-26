@@ -48,6 +48,7 @@ OPENCLAW_INSTALL_DOCKER_CLI=
 OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=false
 OPENCLAW_TZ=Asia/Taipei
 OPENCLAW_MODE=gateway
+TELEGRAM_BOT_TOKEN=請改成 BotFather 提供的 Telegram bot token
 ```
 
 產生 token 可使用：
@@ -129,6 +130,19 @@ networks:
     "restart": true,
     "ownerDisplay": "raw"
   },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      },
+      "groupPolicy": "open",
+      "streaming": "partial"
+    }
+  },
   "gateway": {
     "bind": "lan",
     "controlUi": {
@@ -153,6 +167,10 @@ networks:
 - `allowedOrigins`：加入你實際會開啟 Control UI 的網址
 - `dangerouslyDisableDeviceAuth: true`：只適合內網測試，若改成 HTTPS 或只用 localhost，建議移除
 - `agents.defaults.model.primary`：把預設模型固定成 `openai-codex/gpt-5.4`
+- `channels.telegram`：啟用 Telegram Bot API，私訊預設走 pairing，群組預設可用但需要 `@bot` mention
+
+如果你想讓 Telegram token 只放在 `.env`，建議不要把 `channels.telegram.botToken` 寫進 `openclaw.json`。
+OpenClaw 會優先使用設定檔中的 `botToken`，只有沒寫時才會回退使用 `TELEGRAM_BOT_TOKEN`。
 
 `openclaw.json` 與 `.env` 中的 token 請保持一致。
 
@@ -237,7 +255,89 @@ openclaw models status --probe
 exit
 ```
 
-## 10. 開啟 Control UI
+## 10. 串接 Telegram
+
+### 10.1 建立 Telegram bot
+
+在 Telegram 搜尋 `@BotFather`，依序執行：
+
+```text
+/newbot
+```
+
+依提示完成後，BotFather 會給你一組 bot token。
+
+建議把這組 token 放進 `.env`：
+
+```env
+TELEGRAM_BOT_TOKEN=請填入你的 BotFather token
+```
+
+### 10.2 重新啟動並驗證 Telegram channel
+
+```bash
+docker compose restart openclaw
+docker exec openclaw-server sh -lc 'openclaw channels status --probe'
+```
+
+正常情況會看到類似：
+
+```text
+- Telegram default: enabled, configured, running, mode:polling, bot:@your_bot, token:env, works
+```
+
+如果顯示 `token:config`，表示目前實際使用的是 `openclaw.json` 內的 `channels.telegram.botToken`。
+
+### 10.3 私訊啟用與 pairing
+
+Telegram 私訊預設是 `dmPolicy: "pairing"`，第一次私訊 bot 時，OpenClaw 會要求 pairing。
+
+可在容器內查看與核准：
+
+```bash
+docker exec -it openclaw-server sh
+openclaw pairing list telegram
+openclaw pairing approve telegram <配對碼>
+```
+
+### 10.4 讓 bot 能讀取群組訊息
+
+若要在 Telegram 群組正常觸發 bot，除了把 bot 加入群組，還建議到 `@BotFather` 關閉 privacy mode：
+
+1. 在 Telegram 中打開 `@BotFather`
+2. 輸入 `/mybots`
+3. 選擇你的 bot
+4. 點 `Bot Settings`
+5. 點 `Group Privacy`
+6. 選 `Turn off` 或 `Disable`
+
+修改後，請把 bot 從原群組移除，再重新加回群組，讓 Telegram 套用新的群組隱私設定。
+
+## 11. 在 Telegram 群組內使用
+
+目前這份設定：
+
+- 允許群組使用 Telegram bot
+- 群組訊息需要 `@bot` 才會觸發
+- 不需要先完成 DM pairing 才能在群組內使用
+
+在群組中可直接這樣下指令：
+
+```text
+@tuffyclaw_bot 幫我整理今天這個專案進度
+@tuffyclaw_bot 幫我把這段需求改寫成工程 task
+@tuffyclaw_bot 幫我查今天台積電股價
+```
+
+如果要根據某一則訊息做事，建議用「回覆該訊息 + mention bot」的方式，例如：
+
+```text
+@tuffyclaw_bot 幫我總結上面那段對話
+```
+
+若想讓群組內不用 mention 也能觸發，可把 `channels.telegram.groups."*".requireMention` 改成 `false`，但這樣 bot 會更容易被群組一般聊天誤觸發。
+
+## 12. 開啟 Control UI
 
 本機可使用：
 
@@ -256,9 +356,9 @@ http://192.168.1.10:3000
 - WebSocket URL：`ws://192.168.1.10:3000` 或 `ws://localhost:3000`
 - 網關令牌：填 `.env` 內的 `OPENCLAW_GATEWAY_TOKEN`
 
-## 11. 常見問題
+## 13. 常見問題
 
-### 11.1 `origin not allowed`
+### 13.1 `origin not allowed`
 
 表示 `gateway.controlUi.allowedOrigins` 沒包含你目前開頁面的來源網址。
 
@@ -278,7 +378,7 @@ http://192.168.1.10:3000
 docker compose restart
 ```
 
-### 11.2 `control ui requires device identity`
+### 13.2 `control ui requires device identity`
 
 這通常發生在使用區網 HTTP，而不是 `localhost` 或 HTTPS。
 
@@ -290,7 +390,7 @@ docker compose restart
 
 正式環境建議改用 HTTPS。
 
-### 11.3 容器啟動了，但瀏覽器打不開
+### 13.3 容器啟動了，但瀏覽器打不開
 
 先檢查：
 
@@ -311,7 +411,31 @@ docker logs openclaw-server --tail 50
 "bind": "lan"
 ```
 
-### 11.4 重啟後要不要重新認證
+### 13.4 Telegram 顯示 `works`，但群組內叫 bot 沒反應
+
+先依序檢查：
+
+1. bot 是否真的已加入該群組
+2. 訊息是否有正確 `@bot_username`
+3. `channels.telegram.groups."*".requireMention` 是否仍為 `true`
+4. BotFather 的 `Group Privacy` 是否已關閉
+5. 關閉 privacy mode 後，是否已把 bot 移除再重新加回群組
+
+可再用以下指令確認 Telegram channel 狀態：
+
+```bash
+docker exec openclaw-server sh -lc 'openclaw channels status --probe'
+```
+
+若輸出包含：
+
+```text
+- Telegram default: enabled, configured, running, mode:polling, bot:@your_bot, works
+```
+
+表示 Telegram 連線本身正常，通常問題在群組觸發條件或 Telegram 群組隱私設定。
+
+### 13.5 重啟後要不要重新認證
 
 通常不用。
 
