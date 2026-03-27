@@ -28,27 +28,36 @@ mkdir -p data/openclaw_data
 
 ## 3. 建立 `.env`
 
-請建立 `.env`，內容可參考：
+可直接從 [`.env.example`](/home/tuffy/openclaw-docker-compose/.env.example) 複製：
+
+```bash
+cp .env.example .env
+```
+
+內容可參考：
 
 ```env
-OPENCLAW_CONFIG_DIR=/home/{{ User }}/openclaw-docker-compose/data/.openclaw
-OPENCLAW_WORKSPACE_DIR=/home/{{ User }}/openclaw-docker-compose/data/workspace
-OPENCLAW_OPENCLAWDATA_DIR=/home/{{ User }}/openclaw-docker-compose/data/openclaw_data
+OPENCLAW_CONFIG_DIR=/absolute/path/to/openclaw-docker-compose/data/.openclaw
+OPENCLAW_WORKSPACE_DIR=/absolute/path/to/openclaw-docker-compose/data/workspace
+OPENCLAW_OPENCLAWDATA_DIR=/absolute/path/to/openclaw-docker-compose/data/openclaw_data
 OPENCLAW_GATEWAY_PORT=3000
-OPENCLAW_GATEWAY_TOKEN=請改成你自己的長隨機字串
+# OPENCLAW_BRIDGE_PORT=3001
+# OPENCLAW_GATEWAY_BIND=lan
+OPENCLAW_GATEWAY_TOKEN=replace-with-a-long-random-token
 OPENCLAW_GATEWAY_HOST=0.0.0.0
 OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw:latest
-OPENCLAW_EXTRA_MOUNTS=
-OPENCLAW_HOME_VOLUME=
-OPENCLAW_DOCKER_APT_PACKAGES=
-OPENCLAW_EXTENSIONS=
-OPENCLAW_SANDBOX=
-OPENCLAW_DOCKER_SOCKET=
-OPENCLAW_INSTALL_DOCKER_CLI=
+# OPENCLAW_EXTRA_MOUNTS=
+# OPENCLAW_HOME_VOLUME=
+# OPENCLAW_DOCKER_APT_PACKAGES=
+# OPENCLAW_EXTENSIONS=
+# OPENCLAW_SANDBOX=
+# OPENCLAW_DOCKER_SOCKET=
+# OPENCLAW_INSTALL_DOCKER_CLI=
 OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=false
 OPENCLAW_TZ=Asia/Taipei
 OPENCLAW_MODE=gateway
-TELEGRAM_BOT_TOKEN=請改成 BotFather 提供的 Telegram bot token
+TELEGRAM_BOT_TOKEN=replace-with-your-telegram-bot-token
+# OPENAI_API_KEY=sk-...
 ```
 
 產生 token 可使用：
@@ -58,6 +67,12 @@ openssl rand -hex 32
 ```
 
 ## 4. 建立 `docker-compose.yml`
+
+可直接從 [docker-compose.yml.example](/home/tuffy/openclaw-docker-compose/docker-compose.yml.example) 複製：
+
+```bash
+cp docker-compose.yml.example docker-compose.yml
+```
 
 目前建議使用這份設定：
 
@@ -78,11 +93,14 @@ services:
       - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
       - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
       - OPENCLAW_TZ=${OPENCLAW_TZ}
+      - TZ=${OPENCLAW_TZ}
 
     volumes:
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/workspace
       - ${OPENCLAW_OPENCLAWDATA_DIR}:/home/node/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
     networks:
       - ai-internal
@@ -105,6 +123,12 @@ networks:
 - `volumes` 要掛到 `/home/node/...`，因為容器內實際使用的是這個路徑
 
 ## 5. 建立 `data/.openclaw/openclaw.json`
+
+可直接從 [openclaw.json.example](/home/tuffy/openclaw-docker-compose/openclaw.json.example) 複製：
+
+```bash
+cp openclaw.json.example data/.openclaw/openclaw.json
+```
 
 請建立或修改 [data/.openclaw/openclaw.json](/home/tuffy/openclaw-docker-compose/data/.openclaw/openclaw.json)：
 
@@ -134,6 +158,7 @@ networks:
     "telegram": {
       "enabled": true,
       "dmPolicy": "pairing",
+      "botToken": "replace-with-your-telegram-bot-token",
       "groups": {
         "*": {
           "requireMention": true
@@ -144,6 +169,7 @@ networks:
     }
   },
   "gateway": {
+    "mode": "local",
     "bind": "lan",
     "controlUi": {
       "allowedOrigins": [
@@ -172,7 +198,7 @@ networks:
 如果你想讓 Telegram token 只放在 `.env`，建議不要把 `channels.telegram.botToken` 寫進 `openclaw.json`。
 OpenClaw 會優先使用設定檔中的 `botToken`，只有沒寫時才會回退使用 `TELEGRAM_BOT_TOKEN`。
 
-`openclaw.json` 與 `.env` 中的 token 請保持一致。
+若你同時在 `openclaw.json` 與 `.env` 都有填 Telegram token，請保持一致。
 
 ## 6. 啟動服務
 
@@ -324,15 +350,15 @@ openclaw pairing approve telegram <配對碼>
 在群組中可直接這樣下指令：
 
 ```text
-@tuffyclaw_bot 幫我整理今天這個專案進度
-@tuffyclaw_bot 幫我把這段需求改寫成工程 task
-@tuffyclaw_bot 幫我查今天台積電股價
+@your_bot_username 幫我整理今天這個專案進度
+@your_bot_username 幫我把這段需求改寫成工程 task
+@your_bot_username 幫我查今天台積電股價
 ```
 
 如果要根據某一則訊息做事，建議用「回覆該訊息 + mention bot」的方式，例如：
 
 ```text
-@tuffyclaw_bot 幫我總結上面那段對話
+@your_bot_username 幫我總結上面那段對話
 ```
 
 若想讓群組內不用 mention 也能觸發，可把 `channels.telegram.groups."*".requireMention` 改成 `false`，但這樣 bot 會更容易被群組一般聊天誤觸發。
@@ -447,7 +473,7 @@ docker exec openclaw-server sh -lc 'openclaw channels status --probe'
 
 如果刪掉 [data/.openclaw](/home/tuffy/openclaw-docker-compose/data/.openclaw)，就可能需要重新登入。
 
-## 12. 常用檢查指令
+## 14. 常用檢查指令
 
 ```bash
 docker compose up -d

@@ -1,34 +1,34 @@
-version: "3.9"
-
 services:
   openclaw:
-    image: ghcr.io/openclaw/openclaw:latest
+    image: ${OPENCLAW_IMAGE}
     container_name: openclaw-server
     restart: unless-stopped
-    
-    # 網路安全：僅允許本機存取 3000 埠
+
+    # 對外開放 OpenClaw Gateway 服務埠
     ports:
-      - "127.0.0.1:3000:3000"
-    
-    # 環境變數管理
+      - "${OPENCLAW_GATEWAY_PORT}:3000"
+
+    # 可搭配 .env.example 複製成 .env 後使用
     env_file:
       - .env
     environment:
-      - OPENCLAW_MODE=gateway
-      - OPENCLAW_GATEWAY_HOST=0.0.0.0
-      - OPENCLAW_GATEWAY_PORT=3000
-    
-    # 資料持久化與安全性
+      - OPENCLAW_MODE=${OPENCLAW_MODE}
+      - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
+      - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
+      - OPENCLAW_TZ=${OPENCLAW_TZ}
+      - TZ=${OPENCLAW_TZ}
+
+    # 使用專案相對路徑，避免帶入任何個人主機資訊
     volumes:
-      - openclaw-data:/home/openclaw/.openclaw
-      - ./workspace:/home/openclaw/workspace:rw
-      - ./data:/home/openclaw/data:ro  # 敏感資料夾設為唯讀
-    
-    # 自定義內部網路
+      - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR}:/home/node/workspace
+      - ${OPENCLAW_OPENCLAWDATA_DIR}:/home/node/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
     networks:
       - ai-internal
 
-    # 健康檢查
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -36,16 +36,6 @@ services:
       retries: 3
       start_period: 15s
 
-    # 資源限制
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 2G
-
 networks:
   ai-internal:
     driver: bridge
-
-volumes:
-  openclaw-data:
