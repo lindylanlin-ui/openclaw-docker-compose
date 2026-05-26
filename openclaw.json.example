@@ -2,10 +2,10 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "openai-codex/gpt-5.4"
+        "primary": "openai-codex/gpt-5.4-mini"
       },
       "models": {
-        "openai-codex/gpt-5.4": {
+        "openai-codex/gpt-5.4-mini": {
           "params": {
             "transport": "auto"
           }

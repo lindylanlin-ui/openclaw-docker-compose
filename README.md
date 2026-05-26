@@ -1,6 +1,6 @@
 # OpenClaw Docker Compose SOP
 
-本文件整理這個專案從零開始到成功啟動 OpenClaw，並把預設模型固定為 `openai-codex/gpt-5.4` 的完整流程。
+本文件整理這個專案從零開始到成功啟動 OpenClaw，並把預設模型固定為 `openai-codex/gpt-5.4-mini` 的完整流程。
 
 ## 1. 前置需求
 
@@ -137,10 +137,10 @@ cp openclaw.json.example data/.openclaw/openclaw.json
   "agents": {
     "defaults": {
       "model": {
-        "primary": "openai-codex/gpt-5.4"
+        "primary": "openai-codex/gpt-5.4-mini"
       },
       "models": {
-        "openai-codex/gpt-5.4": {
+        "openai-codex/gpt-5.4-mini": {
           "params": {
             "transport": "auto"
           }
@@ -192,7 +192,7 @@ cp openclaw.json.example data/.openclaw/openclaw.json
 - `gateway.bind: "lan"`：讓 OpenClaw 在容器內綁定 `0.0.0.0`
 - `allowedOrigins`：加入你實際會開啟 Control UI 的網址
 - `dangerouslyDisableDeviceAuth: true`：只適合內網測試，若改成 HTTPS 或只用 localhost，建議移除
-- `agents.defaults.model.primary`：把預設模型固定成 `openai-codex/gpt-5.4`
+- `agents.defaults.model.primary`：把預設模型固定成 `openai-codex/gpt-5.4-mini`
 - `channels.telegram`：啟用 Telegram Bot API，私訊預設走 pairing，群組預設可用但需要 `@bot` mention
 
 如果你想讓 Telegram token 只放在 `.env`，建議不要把 `channels.telegram.botToken` 寫進 `openclaw.json`。
@@ -256,7 +256,7 @@ openclaw models auth login --provider openai-codex
 
 依照畫面完成登入授權。
 
-## 9. 驗證 `openai-codex/gpt-5.4` 是否設定成功
+## 9. 驗證 `openai-codex/gpt-5.4-mini` 是否設定成功
 
 在容器內執行：
 
@@ -272,7 +272,7 @@ openclaw models status --probe
 
 你應確認：
 
-- 預設模型是 `openai-codex/gpt-5.4`
+- 預設模型是 `openai-codex/gpt-5.4-mini`
 - `openai-codex` 認證狀態不是 missing 或 expired
 
 離開容器：
