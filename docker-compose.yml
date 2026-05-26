@@ -1,0 +1,42 @@
+services:
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile.gemini
+    image: openclaw-with-gemini-cli
+    container_name: openclaw-server
+    restart: unless-stopped
+
+    # 對外開放 OpenClaw Gateway 服務埠
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT}:3000"
+
+    # 可搭配 .env.example 複製成 .env 後使用
+    env_file:
+      - .env
+    environment:
+      - OPENCLAW_MODE=${OPENCLAW_MODE}
+      - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
+      - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
+      - OPENCLAW_TZ=${OPENCLAW_TZ}
+      - TZ=${OPENCLAW_TZ}
+
+    # 使用專案相對路徑，避免帶入任何個人主機資訊
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR}:/home/node
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    networks:
+      - ai-internal
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+  ai-internal:
+    driver: bridge
