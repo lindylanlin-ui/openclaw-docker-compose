@@ -23,14 +23,15 @@
     "telegram": {
       "enabled": true,
       "dmPolicy": "pairing",
-      "botToken": "Token",
       "groups": {
         "*": {
           "requireMention": true
         }
       },
       "groupPolicy": "open",
-      "streaming": "partial"
+      "streaming": {
+        "mode": "off"
+      }
     }
   },
   "gateway": {
@@ -41,12 +42,10 @@
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://192.168.1.10:3000"
-      ],
-      "dangerouslyDisableDeviceAuth": true
+      ]
     },
     "auth": {
-      "mode": "token",
-      "token": "請改成和 .env 內 OPENCLAW_GATEWAY_TOKEN 相同的值"
+      "mode": "token"
     }
   }
 }

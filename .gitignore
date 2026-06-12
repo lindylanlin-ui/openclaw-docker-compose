@@ -1,0 +1,11 @@
+# Local env and secret files
+.env
+.env.*
+!.env.example
+!.env.secrets.example
+
+# Local tool state
+.codex
+
+# One-off local backups
+*.pre-*.bak

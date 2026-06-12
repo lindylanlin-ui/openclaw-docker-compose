@@ -26,15 +26,16 @@ mkdir -p data/openclaw_data
 
 只要這些目錄不刪除，`docker compose down` 後再啟動，設定與認證通常都會保留。
 
-## 3. 建立 `.env`
+## 3. 建立 `.env` 與 `.env.secrets`
 
 可直接從 [`.env.example`](/home/tuffy/openclaw-docker-compose/.env.example) 複製：
 
 ```bash
 cp .env.example .env
+cp .env.secrets.example .env.secrets
 ```
 
-內容可參考：
+`.env` 放非敏感設定，內容可參考：
 
 ```env
 OPENCLAW_CONFIG_DIR=/absolute/path/to/openclaw-docker-compose/data/.openclaw
@@ -43,7 +44,6 @@ OPENCLAW_OPENCLAWDATA_DIR=/absolute/path/to/openclaw-docker-compose/data/opencla
 OPENCLAW_GATEWAY_PORT=3000
 # OPENCLAW_BRIDGE_PORT=3001
 # OPENCLAW_GATEWAY_BIND=lan
-OPENCLAW_GATEWAY_TOKEN=replace-with-a-long-random-token
 OPENCLAW_GATEWAY_HOST=0.0.0.0
 OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw:latest
 # OPENCLAW_EXTRA_MOUNTS=
@@ -56,11 +56,18 @@ OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw:latest
 OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=false
 OPENCLAW_TZ=Asia/Taipei
 OPENCLAW_MODE=gateway
+```
+
+`.env.secrets` 只放敏感值：
+
+```env
+OPENCLAW_GATEWAY_TOKEN=replace-with-a-long-random-token
 TELEGRAM_BOT_TOKEN=replace-with-your-telegram-bot-token
+GEMINI_CLI_OAUTH_CLIENT_SECRET=replace-if-you-use-gemini
 # OPENAI_API_KEY=sk-...
 ```
 
-產生 token 可使用：
+產生 gateway token 可使用：
 
 ```bash
 openssl rand -hex 32
@@ -84,10 +91,11 @@ services:
     restart: unless-stopped
 
     ports:
-      - "${OPENCLAW_GATEWAY_PORT}:3000"
+      - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:3000"
 
     env_file:
       - .env
+      - .env.secrets
     environment:
       - OPENCLAW_MODE=${OPENCLAW_MODE}
       - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
@@ -119,8 +127,9 @@ networks:
 
 重點：
 
-- `ports` 使用 `"${OPENCLAW_GATEWAY_PORT}:3000"`，代表主機對外埠號可由 `.env` 控制
+- `ports` 使用 `"127.0.0.1:${OPENCLAW_GATEWAY_PORT}:3000"`，代表只有本機可連到 Gateway
 - `volumes` 要掛到 `/home/node/...`，因為容器內實際使用的是這個路徑
+- `.env.secrets` 不應提交到版本控制，建議權限至少設成 `chmod 600 .env.secrets`
 
 ## 5. 建立 `data/.openclaw/openclaw.json`
 
@@ -158,14 +167,15 @@ cp openclaw.json.example data/.openclaw/openclaw.json
     "telegram": {
       "enabled": true,
       "dmPolicy": "pairing",
-      "botToken": "replace-with-your-telegram-bot-token",
       "groups": {
         "*": {
           "requireMention": true
         }
       },
       "groupPolicy": "open",
-      "streaming": "partial"
+      "streaming": {
+        "mode": "off"
+      }
     }
   },
   "gateway": {
@@ -176,12 +186,10 @@ cp openclaw.json.example data/.openclaw/openclaw.json
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://192.168.1.10:3000"
-      ],
-      "dangerouslyDisableDeviceAuth": true
+      ]
     },
     "auth": {
-      "mode": "token",
-      "token": "請改成和 .env 內 OPENCLAW_GATEWAY_TOKEN 相同的值"
+      "mode": "token"
     }
   }
 }
@@ -191,14 +199,11 @@ cp openclaw.json.example data/.openclaw/openclaw.json
 
 - `gateway.bind: "lan"`：讓 OpenClaw 在容器內綁定 `0.0.0.0`
 - `allowedOrigins`：加入你實際會開啟 Control UI 的網址
-- `dangerouslyDisableDeviceAuth: true`：只適合內網測試，若改成 HTTPS 或只用 localhost，建議移除
 - `agents.defaults.model.primary`：把預設模型固定成 `openai-codex/gpt-5.4-mini`
 - `channels.telegram`：啟用 Telegram Bot API，私訊預設走 pairing，群組預設可用但需要 `@bot` mention
 
-如果你想讓 Telegram token 只放在 `.env`，建議不要把 `channels.telegram.botToken` 寫進 `openclaw.json`。
-OpenClaw 會優先使用設定檔中的 `botToken`，只有沒寫時才會回退使用 `TELEGRAM_BOT_TOKEN`。
-
-若你同時在 `openclaw.json` 與 `.env` 都有填 Telegram token，請保持一致。
+建議不要把 `channels.telegram.botToken` 或 `gateway.auth.token` 直接寫進 `openclaw.json`。
+讓 OpenClaw 回退使用 `.env.secrets` 內的 `TELEGRAM_BOT_TOKEN` 與 `OPENCLAW_GATEWAY_TOKEN`，暴露面會比較小。
 
 ## 6. 啟動服務
 
@@ -293,7 +298,7 @@ exit
 
 依提示完成後，BotFather 會給你一組 bot token。
 
-建議把這組 token 放進 `.env`：
+建議把這組 token 放進 `.env.secrets`：
 
 ```env
 TELEGRAM_BOT_TOKEN=請填入你的 BotFather token

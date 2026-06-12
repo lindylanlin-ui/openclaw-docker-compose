@@ -9,11 +9,12 @@ services:
 
     # 對外開放 OpenClaw Gateway 服務埠
     ports:
-      - "${OPENCLAW_GATEWAY_PORT}:3000"
+      - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:3000"
 
     # 可搭配 .env.example 複製成 .env 後使用
     env_file:
       - .env
+      - .env.secrets
     environment:
       - OPENCLAW_MODE=${OPENCLAW_MODE}
       - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
