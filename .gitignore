@@ -1,11 +1,17 @@
-# Local env and secret files
+# 忽略本機實際使用的 .env 檔，避免把個人設定推上版本庫。
 .env
+
+# 忽略所有本機環境變數變體檔案，例如 .env.secrets 或其他衍生版本。
 .env.*
+
+# 保留可公開的 .env.example 範例檔，讓其他人可以依樣建立自己的設定。
 !.env.example
+
+# 保留可公開的 .env.secrets.example 範例檔，讓其他人知道需要哪些秘密欄位。
 !.env.secrets.example
 
-# Local tool state
+# 忽略本機工具或編輯器留下的 .codex 狀態檔。
 .codex
 
-# One-off local backups
+# 忽略一次性備份檔，避免把修正前快照一起提交。
 *.pre-*.bak

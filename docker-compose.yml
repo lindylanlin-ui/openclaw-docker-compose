@@ -1,43 +1,74 @@
+# 宣告這份 Compose 檔案要管理的所有服務。
 services:
+  # 定義 OpenClaw 主服務的名稱與啟動方式。
   openclaw:
+    # 指定此服務要從本機 Dockerfile 建置自訂映像。
     build:
+      # 指定建置上下文為目前專案根目錄。
       context: .
+      # 指定建置時要使用的 Dockerfile 檔名。
       dockerfile: Dockerfile.gemini
+    # 指定建置完成後的本機映像名稱。
     image: openclaw-with-gemini-cli
+    # 指定固定的容器名稱，方便用 docker 指令直接操作。
     container_name: openclaw-server
+    # 指定容器異常停止後自動重啟。
     restart: unless-stopped
 
-    # 對外開放 OpenClaw Gateway 服務埠
+    # 指定主機要發布給本機使用的 Gateway 連接埠設定。
     ports:
+      # 只將主機的 localhost 埠號轉發到容器內的 3000 埠，避免對外網暴露。
       - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:3000"
 
-    # 可搭配 .env.example 複製成 .env 後使用
+    # 指定 Compose 啟動時要載入的環境變數檔案清單。
     env_file:
+      # 載入非敏感的通用環境變數設定。
       - .env
+      # 載入只保留在本機的敏感秘密值設定。
       - .env.secrets
+    # 指定要顯式傳入容器的環境變數鍵值。
     environment:
+      # 傳入 OpenClaw 的啟動模式。
       - OPENCLAW_MODE=${OPENCLAW_MODE}
+      # 傳入容器內 Gateway 的監聽位址。
       - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
+      # 傳入容器內 Gateway 的監聽埠號。
       - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
+      # 傳入 OpenClaw 使用的時區設定。
       - OPENCLAW_TZ=${OPENCLAW_TZ}
+      # 傳入系統層常見的 TZ 環境變數，讓容器內工具共用時區。
       - TZ=${OPENCLAW_TZ}
 
-    # 使用專案相對路徑，避免帶入任何個人主機資訊
+    # 指定需要掛載進容器內的本機路徑。
     volumes:
+      # 將本機的 OpenClaw 資料目錄掛到容器使用者家目錄。
       - ${OPENCLAW_CONFIG_DIR}:/home/node
+      # 將宿主機的 localtime 掛入容器，讓時間顯示一致。
       - /etc/localtime:/etc/localtime:ro
+      # 將宿主機的 timezone 掛入容器，讓時區資訊一致。
       - /etc/timezone:/etc/timezone:ro
 
+    # 指定此服務要加入的 Docker 網路。
     networks:
+      # 將 OpenClaw 服務接到自訂的內部 bridge 網路。
       - ai-internal
 
+    # 指定 Docker 用來判斷容器是否健康的檢查機制。
     healthcheck:
+      # 透過 curl 請求本機 health endpoint，成功才算健康。
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      # 每 30 秒執行一次健康檢查。
       interval: 30s
+      # 每次健康檢查最長等待 10 秒。
       timeout: 10s
+      # 連續失敗 3 次後才標記為不健康。
       retries: 3
+      # 容器啟動後先給 15 秒暖機時間再開始檢查。
       start_period: 15s
 
+# 宣告此 Compose 檔案內要建立的網路資源。
 networks:
+  # 定義 OpenClaw 內部服務共用的網路名稱。
   ai-internal:
+    # 指定此網路使用 Docker 預設的 bridge 驅動。
     driver: bridge

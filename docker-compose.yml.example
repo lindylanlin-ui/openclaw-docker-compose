@@ -1,42 +1,72 @@
+# 宣告這份範例 Compose 檔案要建立的所有服務。
 services:
+  # 定義範例中的 OpenClaw 主服務名稱。
   openclaw:
+    # 指定直接使用環境變數提供的 OpenClaw 映像。
     image: ${OPENCLAW_IMAGE}
+    # 指定固定容器名稱，方便在文件中引用。
     container_name: openclaw-server
+    # 指定容器停止後的自動重啟策略。
     restart: unless-stopped
 
-    # 對外開放 OpenClaw Gateway 服務埠
+    # 指定主機對本機開放的 Gateway 連接埠設定。
     ports:
+      # 只對 localhost 開放，避免將控制介面直接暴露到區網或公網。
       - "127.0.0.1:${OPENCLAW_GATEWAY_PORT}:3000"
 
-    # 可搭配 .env.example 複製成 .env 後使用
+    # 指定範例檔要載入的環境變數來源檔。
     env_file:
+      # 載入一般設定的 .env 檔。
       - .env
+      # 載入本機秘密值設定的 .env.secrets 檔。
       - .env.secrets
+    # 指定要傳入容器的必要環境變數。
     environment:
+      # 傳入 OpenClaw 的啟動模式設定。
       - OPENCLAW_MODE=${OPENCLAW_MODE}
+      # 傳入容器內 Gateway 要監聽的位址。
       - OPENCLAW_GATEWAY_HOST=${OPENCLAW_GATEWAY_HOST}
+      # 傳入容器內 Gateway 使用的埠號。
       - OPENCLAW_GATEWAY_PORT=${OPENCLAW_GATEWAY_PORT}
+      # 傳入 OpenClaw 內部時區設定。
       - OPENCLAW_TZ=${OPENCLAW_TZ}
+      # 傳入通用的 TZ 環境變數供系統工具共用。
       - TZ=${OPENCLAW_TZ}
 
-    # 使用專案相對路徑，避免帶入任何個人主機資訊
+    # 指定範例中需要掛入容器的本機目錄。
     volumes:
+      # 將設定目錄掛入容器內的 .openclaw 目錄。
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
+      # 將工作區目錄掛入容器內的 workspace 目錄。
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/workspace
+      # 將額外資料目錄掛入容器內的 data 目錄。
       - ${OPENCLAW_OPENCLAWDATA_DIR}:/home/node/data
+      # 將宿主機 localtime 掛入容器以同步時間。
       - /etc/localtime:/etc/localtime:ro
+      # 將宿主機 timezone 掛入容器以同步時區。
       - /etc/timezone:/etc/timezone:ro
 
+    # 指定範例服務要加入的網路。
     networks:
+      # 讓 OpenClaw 接到自訂的內部 bridge 網路。
       - ai-internal
 
+    # 指定範例容器的健康檢查規則。
     healthcheck:
+      # 透過 health endpoint 回應狀態確認服務是否正常。
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      # 每 30 秒執行一次健康檢查。
       interval: 30s
+      # 每次檢查最多等待 10 秒。
       timeout: 10s
+      # 連續失敗 3 次後才標記不健康。
       retries: 3
+      # 啟動後先預留 15 秒給服務完成初始化。
       start_period: 15s
 
+# 宣告範例 Compose 會建立的網路資源。
 networks:
+  # 定義 OpenClaw 服務共用的內部網路名稱。
   ai-internal:
+    # 指定此網路使用 bridge 模式。
     driver: bridge
