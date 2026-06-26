@@ -43,6 +43,8 @@ services:
     volumes:
       # 將本機的 OpenClaw 資料目錄掛到容器使用者家目錄。
       - ${OPENCLAW_CONFIG_DIR}:/home/node
+      # 掛載Project資料夾
+      - ${PROJECT_DIR}:/project
       # 將宿主機的 localtime 掛入容器，讓時間顯示一致。
       - /etc/localtime:/etc/localtime:ro
       # 將宿主機的 timezone 掛入容器，讓時區資訊一致。
