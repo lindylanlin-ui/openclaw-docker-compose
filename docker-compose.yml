@@ -14,6 +14,15 @@ services:
     container_name: openclaw-server
     # 指定容器異常停止後自動重啟。
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - >
+        exec tini -s -- node openclaw.mjs gateway
+        >> /var/log/project/openclaw.log 2>&1
+    logging:
+      driver: none
 
     # 指定主機要發布給本機使用的 Gateway 連接埠設定。
     ports:
@@ -45,6 +54,9 @@ services:
       - ${OPENCLAW_CONFIG_DIR}:/home/node
       # 掛載Project資料夾
       - ${PROJECT_DIR}:/project
+      # 掛載temp_data資料夾
+      - ${TEMP_DATA_DIR}:/temp_data
+      - ./logs:/var/log/project
       # 將宿主機的 localtime 掛入容器，讓時間顯示一致。
       - /etc/localtime:/etc/localtime:ro
       # 將宿主機的 timezone 掛入容器，讓時區資訊一致。

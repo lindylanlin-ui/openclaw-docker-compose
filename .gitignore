@@ -15,3 +15,6 @@
 
 # 忽略一次性備份檔，避免把修正前快照一起提交。
 *.pre-*.bak
+logs/*.log
+logs/*.log-*
+logs/*.gz
